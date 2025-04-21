@@ -1,4 +1,4 @@
-from ipReceiver import execute, get_devices_formatted, get_devices_by_model, format_system_info
+from wlan.ipReceiver import execute, get_devices_formatted, get_devices_by_model, format_system_info
 if __name__ == "__main__":
     
     print("扫描设备中(等待5秒)...")
