@@ -1,5 +1,6 @@
 import os
 import socket
+
 from ipReceiver import get_devices_by_model, format_system_info
 
 PORT = 5001  # Arbitrary port for file transfer

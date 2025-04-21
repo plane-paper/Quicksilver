@@ -2,7 +2,6 @@ import socket
 import threading
 import os
 
-# Import the ipBroadcast module
 import ipBroadcast
 
 def run_broadcast():
