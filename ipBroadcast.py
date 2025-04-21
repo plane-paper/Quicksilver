@@ -22,6 +22,7 @@ def extract_ip(message):
         print("Error: Invalid JSON format in message.")
         return None
 
+# Basically useless unless the user wants to run the script on startup and manually configure it.
 def auto_start():
     if platform.system() == "Windows":
         print("Setting up auto-start on Windows...")
