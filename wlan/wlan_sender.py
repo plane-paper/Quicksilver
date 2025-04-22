@@ -1,5 +1,6 @@
 import os
 import socket
+import time
 
 from ipReceiver import get_devices_by_model, format_system_info
 
@@ -35,15 +36,26 @@ def send_file(ip, file_path):
         filename = os.path.basename(file_path)
 
         print(f"Connecting to {ip}:{PORT}...")
-        with socket.create_connection((ip, PORT), timeout=10) as sock:
+        with socket.create_connection((ip, PORT), timeout=45) as sock:
             print("Connected. Sending metadata...")
             #sock.sendall(f"{filename}:{filesize}".encode() + b"\n")
             sock.sendall(filename.encode() + b"\n")
 
             with open(file_path, "rb") as f:
                 print(f"Sending file: {filename} ({filesize} bytes)...")
+                last_sent_time = time.time()
                 while chunk := f.read(4096):
-                    sock.sendall(chunk)
+                    try:
+                        sock.sendall(chunk)
+                        last_sent_time = time.time()
+                    except socket.timeout:
+                        if time.time() - last_sent_time > 30:
+                            print("No data sent for 30 seconds. Closing connection.")
+                            sock.close()
+                            break
+                        else:
+                            print("Still sending data, hang tight...")
+                            continue
 
         print("File sent successfully.")
     except Exception as e:
