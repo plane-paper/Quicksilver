@@ -21,7 +21,7 @@ def receive_file(host='0.0.0.0', port=54321):
     print(f"[Receiver] Connection established from {addr[0]}")
 
     # Receive the filename
-    filename = conn.recv(1024).decode()
+    filename = conn.recv(1024).decode().strip()
     if not filename:
         print("[Receiver] Failed to receive filename.")
         conn.close()
@@ -29,22 +29,35 @@ def receive_file(host='0.0.0.0', port=54321):
 
     # Prompt user for save path
     print(f"[Receiver] Incoming file: {filename}")
-    save_path = input("Where should I save this file? (Enter full path): ").strip()
+    while True:
+        save_path = input("Where should I save this file? (Enter full path): ").strip()
 
-    if os.path.isdir(save_path):
-        save_path = os.path.join(save_path, filename)
+        if os.path.isdir(save_path):
+            save_path = os.path.join(save_path, filename)
+            break
+        else:
+            print(f"[Receiver] Invalid directory: {save_path}. Please enter a valid directory.")
+            continue
 
-    try:
-        with open(save_path, 'wb') as f:
-            print(f"[Receiver] Saving to {save_path}")
-            while True:
-                data = conn.recv(4096)
-                if not data:
-                    break
-                f.write(data)
-        print("[Receiver] File received successfully.")
-    except Exception as e:
-        print(f"[Receiver] Error saving file: {e}")
+    while True:
+        try:
+            with open(save_path, 'wb') as f:
+                print(f"[Receiver] Saving to {save_path}")
+                while True:
+                    data = conn.recv(4096)
+                    if not data:
+                        break
+                    f.write(data)
+            print("[Receiver] File received successfully.")
+            break
+        except PermissionError:
+            print(f"[Receiver] Permission denied for {save_path}. Please choose a different path.")
+            save_path = input("Where should I save this file? (Enter full path): ").strip()
+            if os.path.isdir(save_path):
+                save_path = os.path.join(save_path, filename)
+        except Exception as e:
+            print(f"[Receiver] Error saving file: {e}")
+            break
 
     conn.close()
     server_socket.close()
