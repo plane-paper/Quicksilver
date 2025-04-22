@@ -5,8 +5,11 @@ import os
 import ipBroadcast
 
 def run_broadcast():
-    # Just call the existing main() from ipBroadcast.py
-    ipBroadcast.main()
+    print("[Broadcast] Starting broadcast loop...")
+    try:
+        ipBroadcast.main()
+    except Exception as e:
+        print(f"[Broadcast] Error: {e}")
 
 def receive_file(host='0.0.0.0', port=54321):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,6 +50,7 @@ def receive_file(host='0.0.0.0', port=54321):
     server_socket.close()
 
 def main():
+    print("[Main] Starting broadcast and receiver...")
     # Start broadcasting in a separate daemon thread
     threading.Thread(target=run_broadcast, daemon=True).start()
     

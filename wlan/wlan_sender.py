@@ -3,7 +3,7 @@ import socket
 
 from ipReceiver import get_devices_by_model, format_system_info
 
-PORT = 5001  # Arbitrary port for file transfer
+PORT = 54321  # Arbitrary port for file transfer
 
 def flatten_devices_by_index(models):
     """Flatten the devices into a numbered list with references"""
@@ -37,7 +37,8 @@ def send_file(ip, file_path):
         print(f"Connecting to {ip}:{PORT}...")
         with socket.create_connection((ip, PORT), timeout=10) as sock:
             print("Connected. Sending metadata...")
-            sock.sendall(f"{filename}:{filesize}".encode() + b"\n")
+            #sock.sendall(f"{filename}:{filesize}".encode() + b"\n")
+            sock.sendall(filename.encode() + b"\n")
 
             with open(file_path, "rb") as f:
                 print(f"Sending file: {filename} ({filesize} bytes)...")

@@ -93,7 +93,7 @@ def broadcast_message(message):
         print("Error: No valid IP address found in message.")
         return
 
-    print(f"Broadcasting message via interface with IP: {target_ip}...")
+    #print(f"Broadcasting message via interface with IP: {target_ip}...")
 
     broadcast_ip = get_broadcast_address(target_ip)
     if not broadcast_ip:
@@ -107,7 +107,7 @@ def broadcast_message(message):
 
     try:
         sock.sendto(message.encode(), (broadcast_ip, port))
-        print(f"Message broadcasted successfully to {broadcast_ip}.")
+        #print(f"Message broadcasted successfully to {broadcast_ip}.")
     except Exception as e:
         print(f"Failed to broadcast message: {e}")
     finally:
