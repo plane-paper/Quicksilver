@@ -58,10 +58,13 @@ def send_file(addr, file_path):
         print(f"Send error: {e}")
 
 
-# Main
-ensure_bluetooth_on()
-devices = discover_devices()
-if devices:
-    addr, name = choose_device(devices)
-    file_path = get_valid_file_path()
-    send_file(addr, file_path)
+def main():
+    ensure_bluetooth_on()
+    devices = discover_devices()
+    if devices:
+        addr, name = choose_device(devices)
+        file_path = get_valid_file_path()
+        send_file(addr, file_path)
+
+if __name__ == '__main__':
+    main()

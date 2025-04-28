@@ -66,5 +66,8 @@ def start_receiver():
     except Exception as e:
         print(f"Receiver error: {e}")
 
+def main():
+    start_receiver()
 
-start_receiver()
+if __name__ == '__main__':
+    main()
