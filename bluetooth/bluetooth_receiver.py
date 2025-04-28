@@ -46,17 +46,17 @@ def start_receiver():
                                 service_classes=[bluetooth.SERIAL_PORT_CLASS],
                                 profiles=[bluetooth.SERIAL_PORT_PROFILE])
 
-    print(f"📡 Waiting for connection on RFCOMM channel {port}...")
+    print(f"Waiting for connection on RFCOMM channel {port}...")
 
     try:
         client_sock, client_info = server_sock.accept()
-        print(f"🔗 Connected to {client_info}")
+        print(f"Connected to {client_info}")
 
         metadata = client_sock.recv(1024).decode()
         filename, file_size = metadata.split("::")
         file_size = int(file_size)
 
-        print(f"📥 Incoming file: {filename} ({file_size} bytes)")
+        print(f"Incoming file: {filename} ({file_size} bytes)")
         save_path = prompt_save_path(filename)
 
         receive_file(save_path, client_sock, file_size)
