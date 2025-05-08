@@ -20,3 +20,4 @@ TBD
 ## Issue Tracker
 - The IP broadcast function is raw and has issues regarding platform detection (currently non-existent) and IP validation. This will be fixed after the main app has been developed.
 - PyBluez2 has known compatibility issues with Python 3.10.X and above, so the version used is an unofficial community version stored on GitHub. As of today, this version is available. In the case that it is no longer available, please replace line 1 in requirements.txt with PyBluez2, and, if possible, also open a PR with the change so everyone else can enjoy the functional scripted version of this project.
+- The bluetooth sending & receiving pair is largely untested due to resource constraints. If any issues are found with preliminary testing, please let me know as soon as possible.
