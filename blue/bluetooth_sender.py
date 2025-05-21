@@ -10,7 +10,7 @@ def discover_devices():
     print("Scanning for Bluetooth devices...")
     devices = bluetooth.discover_devices(duration=8, lookup_names=True)
     for i, (addr, name) in enumerate(devices, start=1):
-        print(f"{i}. {name} [{addr}]")
+        print(f"{i}. {name} [{addr}]") # Debug only
     return devices
 
 
