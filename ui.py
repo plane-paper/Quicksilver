@@ -385,7 +385,7 @@ class FileTransferApp:
         """GUI callback for file save dialog"""
         save_path = filedialog.asksaveasfilename(
             title=f"Save '{filename}' as:",
-            initialfilename=filename,
+            initialfile=filename,
             defaultextension="*",
             filetypes=[("All files", "*.*")]
         )
