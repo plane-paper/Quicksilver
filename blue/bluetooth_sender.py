@@ -33,7 +33,19 @@ def get_valid_file_path():
         print("File not found.")
 
 
-def send_file(addr, file_path):
+def send_file(addr, file_path, progress_callback=None, log_callback=None):
+    """
+    Send file to Bluetooth device
+    progress_callback: function(bytes_sent, total_size)
+    log_callback: function(message)
+    Returns: True if successful, False otherwise
+    """
+    def log(msg):
+        if log_callback:
+            log_callback(msg)
+        else:
+            print(msg)
+    
     try:
         sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
         port = 1  # RFCOMM default
@@ -45,17 +57,36 @@ def send_file(addr, file_path):
         sock.send(metadata.encode())
 
         with open(file_path, 'rb') as f:
-            print(f"Sending '{filename}' ({file_size} bytes)...")
+            log(f"Sending '{filename}' ({file_size} bytes)...")
+            bytes_sent = 0
             while True:
                 chunk = f.read(1024)
                 if not chunk:
                     break
                 sock.send(chunk)
+                bytes_sent += len(chunk)
+                
+                if progress_callback:
+                    progress_callback(bytes_sent, file_size)
 
         sock.close()
-        print("File sent successfully.")
+        log("File sent successfully.")
+        return True
     except Exception as e:
-        print(f"Send error: {e}")
+        log(f"Send error: {e}")
+        return False
+
+
+def send_file_to_device(device_addr, file_path, progress_callback=None, log_callback=None):
+    """
+    Wrapper function for UI - sends file to specific device address
+    """
+    if not os.path.isfile(file_path):
+        if log_callback:
+            log_callback("File not found")
+        return False
+    
+    return send_file(device_addr, file_path, progress_callback, log_callback)
 
 
 def main():
@@ -65,6 +96,7 @@ def main():
         addr, name = choose_device(devices)
         file_path = get_valid_file_path()
         send_file(addr, file_path)
+
 
 if __name__ == '__main__':
     main()

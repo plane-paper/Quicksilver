@@ -1,40 +1,41 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-import socket
 import threading
 import os
 import time
-import json
 
-# Import WLAN modules
-from wlan.ipReceiver import get_devices_by_model, format_system_info, format_time_ago
-from wlan.wlan_sender import send_file as wlan_send_file
-from wlan.ipBroadcast import get_all_system_info
+# Import WLAN modules - using absolute imports
+import wlan.ipReceiver as ipReceiver
+import wlan.wlan_sender as wlan_sender
+import wlan.ipBroadcast as ipBroadcast
+import wlan.wlan_receiver as wlan_receiver
 
 # Import Bluetooth modules
-from blue.bluetooth_sender import discover_devices, send_file as bt_send_file
-from blue.bluetooth_receiver import ensure_bluetooth_on_and_visible
+import blue.bluetooth_sender as bluetooth_sender
+import blue.bluetooth_receiver as bluetooth_receiver
+
 
 class FileTransferApp:
     def __init__(self, root):
         self.root = root
         self.root.title("File Transfer App")
-        self.root.geometry("500x400")
+        self.root.geometry("600x500")
         self.root.configure(padx=20, pady=20)
         
         self.sending = False
         self.receiving = False
+        self.receiver_stop_flag = threading.Event()
+        self.broadcast_stop_flag = threading.Event()
+        
         self.file_path = tk.StringVar()
         self.send_method = tk.StringVar(value="Wi-Fi")
         self.selected_device = None
         self.devices_list = []
-        self.bt_devices = []
         
         self.create_notebook()
         
         # Start broadcasting in background
-        self.broadcast_thread = threading.Thread(target=self.start_background_broadcast, daemon=True)
-        self.broadcast_thread.start()
+        self.start_background_broadcast()
         
     def create_notebook(self):
         """Create a tabbed interface"""
@@ -93,7 +94,7 @@ class FileTransferApp:
         self.status_label = ttk.Label(status_frame, text="Ready")
         self.status_label.pack(side="left")
         
-        self.progress_bar = ttk.Progressbar(status_frame, orient="horizontal", mode="indeterminate")
+        self.progress_bar = ttk.Progressbar(status_frame, orient="horizontal", mode="determinate")
         
         # Send button
         self.send_button = ttk.Button(parent, text="Send", command=self.send_file)
@@ -105,17 +106,17 @@ class FileTransferApp:
     def build_receive_ui(self, parent):
         """Build the UI for receiving files"""
         # Information frame
-        info_frame = ttk.LabelFrame(parent, text="Receiver Status")
+        info_frame = ttk.LabelFrame(parent, text="Receiver Settings")
         info_frame.pack(fill="x", pady=(0, 10))
         
         self.receive_method = tk.StringVar(value="Wi-Fi")
         ttk.Radiobutton(info_frame, text="Wi-Fi", variable=self.receive_method, 
-                       value="Wi-Fi", command=self.toggle_receiver).pack(anchor="w")
+                       value="Wi-Fi").pack(anchor="w")
         ttk.Radiobutton(info_frame, text="Bluetooth", variable=self.receive_method,
-                       value="Bluetooth", command=self.toggle_receiver).pack(anchor="w")
+                       value="Bluetooth").pack(anchor="w")
         
         # Status indicators
-        self.receiver_status = ttk.Label(info_frame, text="Receiver is OFF")
+        self.receiver_status = ttk.Label(info_frame, text="Receiver is OFF", foreground="red")
         self.receiver_status.pack(anchor="w", pady=5)
         
         self.receiver_info = ttk.Label(info_frame, text="")
@@ -136,14 +137,23 @@ class FileTransferApp:
         log_frame = ttk.LabelFrame(parent, text="Receive Log")
         log_frame.pack(fill="both", expand=True, pady=(10, 0))
         
-        self.log_text = tk.Text(log_frame, height=10, wrap="word")
-        self.log_text.pack(fill="both", expand=True)
+        # Add scrollbar to log
+        log_scroll_frame = ttk.Frame(log_frame)
+        log_scroll_frame.pack(fill="both", expand=True)
+        
+        self.log_text = tk.Text(log_scroll_frame, height=10, wrap="word")
+        log_scrollbar = ttk.Scrollbar(log_scroll_frame, orient="vertical", command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=log_scrollbar.set)
+        
+        self.log_text.pack(side="left", fill="both", expand=True)
+        log_scrollbar.pack(side="right", fill="y")
         
     def log(self, message):
         """Add a message to the log with timestamp"""
         timestamp = time.strftime("%H:%M:%S")
         self.log_text.insert("end", f"[{timestamp}] {message}\n")
-        self.log_text.see("end")  # Scroll to the end
+        self.log_text.see("end")
+        self.root.update_idletasks()
     
     def browse_file(self):
         """Open file browser to select a file"""
@@ -158,7 +168,8 @@ class FileTransferApp:
         self.device_listbox.delete(0, tk.END)
         
         # Show progress bar while scanning
-        self.progress_bar.pack(side="right", fill="x", expand=True)
+        self.progress_bar.pack(side="right", fill="x", expand=True, padx=(10, 0))
+        self.progress_bar.config(mode="indeterminate")
         self.progress_bar.start()
         
         # Run device discovery in a thread
@@ -168,34 +179,37 @@ class FileTransferApp:
         """Background thread to discover devices"""
         method = self.send_method.get()
         
-        if method == "Wi-Fi":
-            # Get WLAN devices
-            models = get_devices_by_model(timeout=2)
-            self.devices_list = []
-            
-            for model in sorted(models.keys()):
-                for device in models[model]:
-                    display_text = f"{device['name']} [{device['ip']}] - {format_time_ago(device['last_seen'])}"
+        try:
+            if method == "Wi-Fi":
+                # Use existing ipReceiver module
+                models = ipReceiver.get_devices_by_model(timeout=3)
+                self.devices_list = []
+                
+                for model in sorted(models.keys()):
+                    for device in models[model]:
+                        display_text = f"{device['name']} [{device['ip']}] - {ipReceiver.format_time_ago(device['last_seen'])}"
+                        self.devices_list.append({
+                            'display': display_text,
+                            'ip': device['ip'],
+                            'name': device['name'],
+                            'mac': device['mac'],
+                            'type': 'wifi'
+                        })
+            else:
+                # Use existing bluetooth_sender module
+                bt_devices = bluetooth_sender.discover_devices()
+                self.devices_list = []
+                
+                for addr, name in bt_devices:
+                    display_text = f"{name} [{addr}]"
                     self.devices_list.append({
                         'display': display_text,
-                        'ip': device['ip'],
-                        'name': device['name'],
-                        'mac': device['mac'],
-                        'type': 'wifi'
+                        'addr': addr,
+                        'name': name,
+                        'type': 'bluetooth'
                     })
-        else:
-            # Get Bluetooth devices
-            bt_devices = discover_devices()
-            self.devices_list = []
-            
-            for i, (addr, name) in enumerate(bt_devices):
-                display_text = f"{name} [{addr}]"
-                self.devices_list.append({
-                    'display': display_text,
-                    'addr': addr,
-                    'name': name,
-                    'type': 'bluetooth'
-                })
+        except Exception as e:
+            self.root.after(0, lambda: self.log(f"Error discovering devices: {e}"))
         
         # Update UI in main thread
         self.root.after(0, self._update_device_listbox)
@@ -230,6 +244,14 @@ class FileTransferApp:
             device_name = self.selected_device.get('name', 'Unknown')
             self.status_label.config(text=f"Selected: {device_name}")
     
+    def update_progress(self, bytes_sent, total_size):
+        """Update progress bar during file transfer"""
+        if total_size > 0:
+            progress = (bytes_sent / total_size) * 100
+            self.progress_bar.config(value=progress)
+            self.status_label.config(text=f"Sending... {progress:.1f%}")
+            self.root.update_idletasks()
+    
     def send_file(self):
         """Initiate file sending process"""
         if self.sending:
@@ -251,36 +273,49 @@ class FileTransferApp:
         # Start sending
         self.sending = True
         self.send_button.config(state="disabled")
-        self.status_label.config(text="Sending file...")
-        self.progress_bar.pack(side="right", fill="x", expand=True)
-        self.progress_bar.start()
+        self.status_label.config(text="Connecting...")
+        self.progress_bar.config(mode="determinate", value=0)
+        self.progress_bar.pack(side="right", fill="x", expand=True, padx=(10, 0))
         
         # Run the transfer in a background thread
         threading.Thread(target=self._send_file_thread, daemon=True).start()
     
     def _send_file_thread(self):
         """Background thread to handle file sending"""
+        success = False
         try:
             method = self.send_method.get()
             file_path = self.file_path.get()
             
             if method == "Wi-Fi" and self.selected_device['type'] == 'wifi':
-                # Send via WLAN
+                # Use existing wlan_sender module
                 ip = self.selected_device['ip']
                 self.root.after(0, lambda: self.status_label.config(text=f"Connecting to {ip}..."))
-                wlan_send_file(ip, file_path)
+                success = wlan_sender.send_file_to_device(
+                    ip, file_path, 
+                    progress_callback=lambda sent, total: self.root.after(0, lambda: self.update_progress(sent, total)),
+                    log_callback=lambda msg: self.root.after(0, lambda: self.log(msg))
+                )
             elif method == "Bluetooth" and self.selected_device['type'] == 'bluetooth':
-                # Send via Bluetooth
+                # Use existing bluetooth_sender module
                 addr = self.selected_device['addr']
                 self.root.after(0, lambda: self.status_label.config(text=f"Connecting to {addr}..."))
-                bt_send_file(addr, file_path)
+                success = bluetooth_sender.send_file_to_device(
+                    addr, file_path,
+                    progress_callback=lambda sent, total: self.root.after(0, lambda: self.update_progress(sent, total)),
+                    log_callback=lambda msg: self.root.after(0, lambda: self.log(msg))
+                )
             else:
-                self.root.after(0, lambda: messagebox.showerror("Error", "Selected device does not support this transfer method"))
+                self.root.after(0, lambda: messagebox.showerror("Error", "Device type mismatch"))
+                return
                 
-            # Success
-            self.root.after(0, lambda: messagebox.showinfo("Success", "File sent successfully"))
+            # Show result
+            if success:
+                self.root.after(0, lambda: messagebox.showinfo("Success", "File sent successfully"))
+            else:
+                self.root.after(0, lambda: messagebox.showerror("Error", "Failed to send file"))
+                
         except Exception as e:
-            # Error
             self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to send file: {str(e)}"))
         finally:
             # Reset UI state
@@ -296,44 +331,14 @@ class FileTransferApp:
     
     def start_background_broadcast(self):
         """Start broadcasting system info in background"""
-        while True:
+        def broadcast_loop():
             try:
-                # Only broadcast if we're not currently sending
-                if not self.sending:
-                    system_info_list = get_all_system_info()
-                    for system_info in system_info_list:
-                        message = json.dumps(system_info)
-                        try:
-                            # Call broadcast_message without referencing it directly
-                            # since it's not properly defined in ipBroadcast.py
-                            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                            broadcast_ip = self._calculate_broadcast_address(system_info['ip'])
-                            if broadcast_ip:
-                                sock.sendto(message.encode(), (broadcast_ip, 12345))
-                            sock.close()
-                        except Exception:
-                            pass
-            except Exception:
-                # Silently ignore errors in background thread
-                pass
-            
-            # Sleep for a while
-            time.sleep(2)
-    
-    def _calculate_broadcast_address(self, ip):
-        """Calculate broadcast address for an IP (simplified)"""
-        # Simple method: assume /24 network
-        parts = ip.split('.')
-        if len(parts) == 4:
-            return f"{parts[0]}.{parts[1]}.{parts[2]}.255"
-        return None
-    
-    def toggle_receiver(self):
-        """Toggle the receiver method"""
-        # Stop any running receiver
-        if self.receiving:
-            self.stop_receiver()
+                ipBroadcast.start_broadcasting_loop(self.broadcast_stop_flag)
+            except Exception as e:
+                print(f"Broadcast error: {e}")
+        
+        self.broadcast_thread = threading.Thread(target=broadcast_loop, daemon=True)
+        self.broadcast_thread.start()
     
     def start_receiver(self):
         """Start the receiver based on selected method"""
@@ -344,6 +349,7 @@ class FileTransferApp:
         self.log(f"Starting {method} receiver...")
         
         self.receiving = True
+        self.receiver_stop_flag.clear()
         self.start_receiver_btn.config(state="disabled")
         self.stop_receiver_btn.config(state="normal")
         
@@ -354,10 +360,10 @@ class FileTransferApp:
         # Update UI
         if method == "Wi-Fi":
             ip = self._get_local_ip()
-            self.receiver_status.config(text="Wi-Fi Receiver is ACTIVE")
+            self.receiver_status.config(text="Wi-Fi Receiver is ACTIVE", foreground="green")
             self.receiver_info.config(text=f"Listening on {ip}:54321")
         else:
-            self.receiver_status.config(text="Bluetooth Receiver is ACTIVE")
+            self.receiver_status.config(text="Bluetooth Receiver is ACTIVE", foreground="green")
             self.receiver_info.config(text="Bluetooth device is discoverable")
     
     def stop_receiver(self):
@@ -367,13 +373,23 @@ class FileTransferApp:
         
         self.log("Stopping receiver...")
         self.receiving = False
-        # The receiver thread will terminate on next iteration
+        self.receiver_stop_flag.set()
         
         # Update UI
         self.start_receiver_btn.config(state="normal")
         self.stop_receiver_btn.config(state="disabled")
-        self.receiver_status.config(text="Receiver is OFF")
+        self.receiver_status.config(text="Receiver is OFF", foreground="red")
         self.receiver_info.config(text="")
+
+    def gui_save_callback(self, filename):
+        """GUI callback for file save dialog"""
+        save_path = filedialog.asksaveasfilename(
+            title=f"Save '{filename}' as:",
+            initialfilename=filename,
+            defaultextension="*",
+            filetypes=[("All files", "*.*")]
+        )
+        return save_path if save_path else None
 
     def _run_receiver(self):
         """Run the appropriate receiver in a background thread"""
@@ -381,159 +397,37 @@ class FileTransferApp:
         
         try:
             if method == "Wi-Fi":
-                self._run_wlan_receiver()
+                # Use existing wlan_receiver module
+                success = wlan_receiver.receive_file_blocking(
+                    host='0.0.0.0', 
+                    port=54321,
+                    gui_callback=self.gui_save_callback,
+                    log_callback=lambda msg: self.root.after(0, lambda: self.log(msg)),
+                    stop_flag=self.receiver_stop_flag
+                )
+                if success:
+                    self.root.after(0, lambda: self.log("File received successfully"))
             else:
-                self._run_bluetooth_receiver()
+                # Use existing bluetooth_receiver module
+                success = bluetooth_receiver.start_receiver_blocking(
+                    gui_callback=self.gui_save_callback,
+                    progress_callback=None,
+                    log_callback=lambda msg: self.root.after(0, lambda: self.log(msg))
+                )
+                if success:
+                    self.root.after(0, lambda: self.log("File received successfully"))
+                    
         except Exception as e:
-            self.log(f"Error in receiver: {e}")
+            self.root.after(0, lambda: self.log(f"Error in receiver: {e}"))
         finally:
             # Reset UI if the thread exits for any reason
             if self.receiving:
                 self.root.after(0, self.stop_receiver)
     
-    def _run_wlan_receiver(self):
-        """Run the WLAN receiver"""
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.bind(('0.0.0.0', 54321))
-        server_socket.listen(1)
-        server_socket.settimeout(1)  # Allow polling for stop flag
-        
-        self.log("WLAN receiver started, waiting for connections...")
-        
-        while self.receiving:
-            try:
-                conn, addr = server_socket.accept()
-                self.log(f"Connection from {addr[0]}")
-                
-                # Receive filename
-                try:
-                    filename = conn.recv(1024).decode().strip()
-                    if not filename:
-                        self.log("Failed to receive filename")
-                        conn.close()
-                        continue
-                        
-                    self.log(f"Receiving file: {filename}")
-                    
-                    # Ask user for save location
-                    save_dir = filedialog.askdirectory(title=f"Save '{filename}' to:")
-                    if not save_dir:
-                        self.log("File save canceled")
-                        conn.close()
-                        continue
-                    
-                    save_path = os.path.join(save_dir, filename)
-                    
-                    # Receive the file
-                    with open(save_path, 'wb') as f:
-                        while self.receiving:
-                            try:
-                                data = conn.recv(4096)
-                                if not data:
-                                    break
-                                f.write(data)
-                            except socket.timeout:
-                                continue
-                    
-                    self.log(f"File saved to: {save_path}")
-                except Exception as e:
-                    self.log(f"Error receiving file: {e}")
-                finally:
-                    conn.close()
-                    
-            except socket.timeout:
-                # This is just to check the receiving flag periodically
-                continue
-            except Exception as e:
-                self.log(f"Socket error: {e}")
-                time.sleep(1)  # Prevent CPU spike on repeated errors
-        
-        # Clean up
-        try:
-            server_socket.close()
-        except:
-            pass
-    
-    def _run_bluetooth_receiver(self):
-        """Run the Bluetooth receiver"""
-        import bluetooth  # Import here to prevent issues if bluetooth isn't available
-        
-        ensure_bluetooth_on_and_visible()
-        self.log("Bluetooth receiver started, device is discoverable")
-        
-        server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        server_sock.bind(("", bluetooth.PORT_ANY))
-        server_sock.listen(1)
-        port = server_sock.getsockname()[1]
-        
-        # Advertise service
-        bluetooth.advertise_service(
-            server_sock, "BtFileReceiver",
-            service_classes=[bluetooth.SERIAL_PORT_CLASS],
-            profiles=[bluetooth.SERIAL_PORT_PROFILE]
-        )
-        
-        self.log(f"Listening on RFCOMM channel {port}")
-        server_sock.settimeout(1)  # Allow polling for stop flag
-        
-        while self.receiving:
-            try:
-                client_sock, client_info = server_sock.accept()
-                self.log(f"Connection from {client_info}")
-                
-                try:
-                    # Get file metadata
-                    metadata = client_sock.recv(1024).decode()
-                    filename, file_size = metadata.split("::")
-                    file_size = int(file_size)
-                    
-                    self.log(f"Receiving file: {filename} ({file_size} bytes)")
-                    
-                    # Ask user for save location
-                    save_dir = filedialog.askdirectory(title=f"Save '{filename}' to:")
-                    if not save_dir:
-                        self.log("File save canceled")
-                        client_sock.close()
-                        continue
-                    
-                    save_path = os.path.join(save_dir, filename)
-                    
-                    # Receive the file
-                    with open(save_path, 'wb') as f:
-                        bytes_received = 0
-                        while bytes_received < file_size and self.receiving:
-                            try:
-                                data = client_sock.recv(1024)
-                                if not data:
-                                    break
-                                f.write(data)
-                                bytes_received += len(data)
-                            except socket.timeout:
-                                continue
-                    
-                    self.log(f"File saved to: {save_path}")
-                except Exception as e:
-                    self.log(f"Error receiving file: {e}")
-                finally:
-                    client_sock.close()
-                    
-            except socket.timeout:
-                # This is just to check the receiving flag periodically
-                continue
-            except Exception as e:
-                self.log(f"Socket error: {e}")
-                time.sleep(1)  # Prevent CPU spike on repeated errors
-        
-        # Clean up
-        try:
-            server_sock.close()
-        except:
-            pass
-    
     def _get_local_ip(self):
         """Get local IP address"""
+        import socket
         try:
-            # Create a socket that connects to an external address
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
             ip = s.getsockname()[0]
@@ -542,10 +436,19 @@ class FileTransferApp:
         except:
             return "127.0.0.1"
 
+    def on_closing(self):
+        """Handle application closing"""
+        self.broadcast_stop_flag.set()
+        self.receiver_stop_flag.set()
+        self.root.destroy()
+
+
 def main():
     root = tk.Tk()
     app = FileTransferApp(root)
+    root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()

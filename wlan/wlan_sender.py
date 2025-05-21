@@ -2,7 +2,7 @@ import os
 import socket
 import time
 
-from wlan.ipReceiver import get_devices_by_model, format_system_info
+from .ipReceiver import get_devices_by_model, format_system_info
 
 PORT = 54321  # Arbitrary port for file transfer
 
@@ -29,37 +29,77 @@ def select_device(devices):
         except ValueError:
             print("Please enter a valid number.")
 
-def send_file(ip, file_path):
-    """Send a file to the selected IP over TCP"""
+def send_file(ip, file_path, progress_callback=None, log_callback=None):
+    """
+    Send a file to the selected IP over TCP
+    progress_callback: function(bytes_sent, total_size)
+    log_callback: function(message)
+    Returns: True if successful, False otherwise
+    """
+    def log(msg):
+        if log_callback:
+            log_callback(msg)
+        else:
+            print(msg)
+    
     try:
         filesize = os.path.getsize(file_path)
         filename = os.path.basename(file_path)
 
-        print(f"Connecting to {ip}:{PORT}...")
+        log(f"Connecting to {ip}:{PORT}...")
         with socket.create_connection((ip, PORT), timeout=45) as sock:
-            print("Connected. Sending metadata...")
-            #sock.sendall(f"{filename}:{filesize}".encode() + b"\n")
+            log("Connected. Sending metadata...")
             sock.sendall(filename.encode() + b"\n")
 
             with open(file_path, "rb") as f:
-                print(f"Sending file: {filename} ({filesize} bytes)...")
+                log(f"Sending file: {filename} ({filesize} bytes)...")
+                bytes_sent = 0
                 last_sent_time = time.time()
+                
                 while chunk := f.read(4096):
                     try:
                         sock.sendall(chunk)
+                        bytes_sent += len(chunk)
                         last_sent_time = time.time()
+                        
+                        if progress_callback:
+                            progress_callback(bytes_sent, filesize)
+                            
                     except socket.timeout:
                         if time.time() - last_sent_time > 30:
-                            print("No data sent for 30 seconds. Closing connection.")
-                            sock.close()
-                            break
+                            log("No data sent for 30 seconds. Closing connection.")
+                            return False
                         else:
-                            print("Still sending data, hang tight...")
+                            log("Still sending data, hang tight...")
                             continue
 
-        print("File sent successfully.")
+        log("File sent successfully.")
+        return True
     except Exception as e:
-        print(f"Error sending file: {e}")
+        log(f"Error sending file: {e}")
+        return False
+
+
+def send_file_to_device(device_ip, file_path, progress_callback=None, log_callback=None):
+    """
+    Wrapper function for UI - sends file to specific device IP
+    """
+    if not os.path.isfile(file_path):
+        if log_callback:
+            log_callback("File not found")
+        return False
+    
+    return send_file(device_ip, file_path, progress_callback, log_callback)
+
+
+def get_available_devices(timeout=2):
+    """
+    Get list of available devices for UI
+    Returns: list of device dictionaries with 'name', 'ip', 'mac', 'model' keys
+    """
+    models = get_devices_by_model(timeout=timeout)
+    return flatten_devices_by_index(models)
+
 
 def main():
     while True:
