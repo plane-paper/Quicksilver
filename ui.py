@@ -35,7 +35,15 @@ class FileTransferApp:
         self.create_notebook()
         
         # Start broadcasting in background
-        self.start_background_broadcast()
+        # self.start_background_broadcast()
+        
+        # Auto-start receiver with default method (Wi-Fi)
+        self.root.after(1000, self.auto_start_receiver)  # Start after 1 second to ensure UI is ready
+        
+    def auto_start_receiver(self):
+        """Automatically start the receiver when the app launches"""
+        if not self.receiving:
+            self.start_receiver()
         
     def create_notebook(self):
         """Create a tabbed interface"""
@@ -110,10 +118,13 @@ class FileTransferApp:
         info_frame.pack(fill="x", pady=(0, 10))
         
         self.receive_method = tk.StringVar(value="Wi-Fi")
-        ttk.Radiobutton(info_frame, text="Wi-Fi", variable=self.receive_method, 
-                       value="Wi-Fi").pack(anchor="w")
-        ttk.Radiobutton(info_frame, text="Bluetooth", variable=self.receive_method,
-                       value="Bluetooth").pack(anchor="w")
+        wifi_radio = ttk.Radiobutton(info_frame, text="Wi-Fi", variable=self.receive_method, 
+                       value="Wi-Fi", command=self.on_receive_method_change)
+        wifi_radio.pack(anchor="w")
+        
+        bt_radio = ttk.Radiobutton(info_frame, text="Bluetooth", variable=self.receive_method,
+                       value="Bluetooth", command=self.on_receive_method_change)
+        bt_radio.pack(anchor="w")
         
         # Status indicators
         self.receiver_status = ttk.Label(info_frame, text="Receiver is OFF", foreground="red")
@@ -147,6 +158,15 @@ class FileTransferApp:
         
         self.log_text.pack(side="left", fill="both", expand=True)
         log_scrollbar.pack(side="right", fill="y")
+    
+    def on_receive_method_change(self):
+        """Handle change in receive method selection"""
+        if self.receiving:
+            # If receiver is currently running, restart it with the new method
+            self.log("Switching receiver method...")
+            self.stop_receiver()
+            # Give a short delay before restarting
+            self.root.after(500, self.start_receiver)
         
     def log(self, message):
         """Add a message to the log with timestamp"""
@@ -339,6 +359,11 @@ class FileTransferApp:
         
         self.broadcast_thread = threading.Thread(target=broadcast_loop, daemon=True)
         self.broadcast_thread.start()
+
+    def stop_background_broadcast(self):
+        self.broadcast_stop_flag.set()
+        if hasattr(self, 'broadcast_thread') and self.broadcast_thread.is_alive():
+            self.broadcast_thread.join(timeout=1)
     
     def start_receiver(self):
         """Start the receiver based on selected method"""
@@ -362,9 +387,11 @@ class FileTransferApp:
             ip = self._get_local_ip()
             self.receiver_status.config(text="Wi-Fi Receiver is ACTIVE", foreground="green")
             self.receiver_info.config(text=f"Listening on {ip}:54321")
+            self.start_background_broadcast()
         else:
             self.receiver_status.config(text="Bluetooth Receiver is ACTIVE", foreground="green")
             self.receiver_info.config(text="Bluetooth device is discoverable")
+            self.stop_background_broadcast()
     
     def stop_receiver(self):
         """Stop the active receiver"""
@@ -374,7 +401,8 @@ class FileTransferApp:
         self.log("Stopping receiver...")
         self.receiving = False
         self.receiver_stop_flag.set()
-        
+        self.stop_background_broadcast()
+
         # Update UI
         self.start_receiver_btn.config(state="normal")
         self.stop_receiver_btn.config(state="disabled")
@@ -395,34 +423,39 @@ class FileTransferApp:
         """Run the appropriate receiver in a background thread"""
         method = self.receive_method.get()
         
-        try:
-            if method == "Wi-Fi":
-                # Use existing wlan_receiver module
-                success = wlan_receiver.receive_file_blocking(
-                    host='0.0.0.0', 
-                    port=54321,
-                    gui_callback=self.gui_save_callback,
-                    log_callback=lambda msg: self.root.after(0, lambda: self.log(msg)),
-                    stop_flag=self.receiver_stop_flag
-                )
-                if success:
-                    self.root.after(0, lambda: self.log("File received successfully"))
-            else:
-                # Use existing bluetooth_receiver module
-                success = bluetooth_receiver.start_receiver_blocking(
-                    gui_callback=self.gui_save_callback,
-                    progress_callback=None,
-                    log_callback=lambda msg: self.root.after(0, lambda: self.log(msg))
-                )
-                if success:
-                    self.root.after(0, lambda: self.log("File received successfully"))
-                    
-        except Exception as e:
-            self.root.after(0, lambda: self.log(f"Error in receiver: {e}"))
-        finally:
-            # Reset UI if the thread exits for any reason
-            if self.receiving:
-                self.root.after(0, self.stop_receiver)
+        while self.receiving and not self.receiver_stop_flag.is_set():
+            try:
+                if method == "Wi-Fi":
+                    # Use existing wlan_receiver module
+                    success = wlan_receiver.receive_file_blocking(
+                        host='0.0.0.0', 
+                        port=54321,
+                        gui_callback=self.gui_save_callback,
+                        log_callback=lambda msg: self.root.after(0, lambda: self.log(msg)),
+                        stop_flag=self.receiver_stop_flag
+                    )
+                    if success:
+                        self.root.after(0, lambda: self.log("File received successfully - receiver still active"))
+                    # Continue the loop to keep receiving more files
+                else:
+                    # Use existing bluetooth_receiver module
+                    success = bluetooth_receiver.start_receiver_blocking(
+                        gui_callback=self.gui_save_callback,
+                        progress_callback=None,
+                        log_callback=lambda msg: self.root.after(0, lambda: self.log(msg))
+                    )
+                    if success:
+                        self.root.after(0, lambda: self.log("File received successfully - receiver still active"))
+                    # Continue the loop to keep receiving more files
+                        
+            except Exception as e:
+                if self.receiving:  # Only log error if we're still supposed to be receiving
+                    self.root.after(0, lambda: self.log(f"Error in receiver: {e}"))
+                    # Brief pause before retrying
+                    time.sleep(1)
+        
+        # Clean up when loop exits
+        self.root.after(0, lambda: self.log("Receiver stopped"))
     
     def _get_local_ip(self):
         """Get local IP address"""
