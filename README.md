@@ -9,15 +9,20 @@
 A scalable, easy-to-use, lightweight file transfer & detection system that uses both bluetooth and WLAN. Currently supports windows.
 
 ## Getting Started
-### REQUIREMENTS
-If you are installing the pre-packaged EXE version of Quicksilver, the only installation you would have to complete is that of a 64 bit version of Python 3.12.6 or higher. It is recommended to add it to path during the installation process.
+### INSTALLATION
+There are two options for installation: the EXE and the source code.
 
-If you planning to clone the source code and make your own modifications, be sure to run in your shell or terminal:
+### REQUIREMENTS AND DEPENDENCIES
+If you are installing the pre-packaged EXE version of Quicksilver, no dependencies are needed.
+
+If you planning to clone the source code and make your own modifications, be sure to first install Python 3.12 or higher, then run in your shell or terminal:
 ```
 cd C:/full/cloned/repo/path
 pip install -r requirements.txt
 ```
 So the appropriate python packages would be available for your scripts to run. You can also check requirements.txt in the root directory for a list of all necessary packages.
+
+If you already have python, you can run ```python -V``` in any terminal to check its version. 
 
 ### USER MANUAL
 TBD
