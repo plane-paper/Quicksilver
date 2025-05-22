@@ -156,6 +156,8 @@ def get_all_system_info_english():
         print(f"DEBUG: Error in get_all_system_info_english: {e}")
     
     return system_info_list
+
+def get_all_system_info_alternative():
     """Alternative method using socket library"""
     system_info_list = []
     pc_name = socket.gethostname()
