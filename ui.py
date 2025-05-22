@@ -163,8 +163,9 @@ class FileTransferApp:
         """Handle change in receive method selection"""
         if self.receiving:
             # If receiver is currently running, restart it with the new method
-            self.log("Switching receiver method...")
-            self.stop_receiver()
+            method = self.receive_method.get()
+            self.log(f"Switching receiver method to {method}")
+            self.stop_receiver(target_method=method)
             # Give a short delay before restarting
             self.root.after(500, self.start_receiver)
         
@@ -269,7 +270,7 @@ class FileTransferApp:
         if total_size > 0:
             progress = (bytes_sent / total_size) * 100
             self.progress_bar.config(value=progress)
-            self.status_label.config(text=f"Sending... {progress:.1f%}")
+            self.status_label.config(text=f"Sending... {progress:.1f}%")
             self.root.update_idletasks()
     
     def send_file(self):
@@ -350,6 +351,8 @@ class FileTransferApp:
         self.progress_bar.pack_forget()
     
     def start_background_broadcast(self):
+        print("DEBUG: start_background_broadcast function called")
+        self.broadcast_stop_flag.clear() # So the broadcast can always start when this function is called
         """Start broadcasting system info in background"""
         def broadcast_loop():
             try:
@@ -361,6 +364,7 @@ class FileTransferApp:
         self.broadcast_thread.start()
 
     def stop_background_broadcast(self):
+        print("DEBUG: stop_background_broadcast function called")
         self.broadcast_stop_flag.set()
         if hasattr(self, 'broadcast_thread') and self.broadcast_thread.is_alive():
             self.broadcast_thread.join(timeout=1)
@@ -391,9 +395,9 @@ class FileTransferApp:
         else:
             self.receiver_status.config(text="Bluetooth Receiver is ACTIVE", foreground="green")
             self.receiver_info.config(text="Bluetooth device is discoverable")
-            self.stop_background_broadcast()
+            
     
-    def stop_receiver(self):
+    def stop_receiver(self, target_method):
         """Stop the active receiver"""
         if not self.receiving:
             return
@@ -401,7 +405,9 @@ class FileTransferApp:
         self.log("Stopping receiver...")
         self.receiving = False
         self.receiver_stop_flag.set()
-        self.stop_background_broadcast()
+        if target_method == "Bluetooth":
+            self.stop_background_broadcast()
+            self.broadcast_stop_flag.clear()
 
         # Update UI
         self.start_receiver_btn.config(state="normal")
@@ -421,9 +427,10 @@ class FileTransferApp:
 
     def _run_receiver(self):
         """Run the appropriate receiver in a background thread"""
-        method = self.receive_method.get()
+        
         
         while self.receiving and not self.receiver_stop_flag.is_set():
+            method = self.receive_method.get()
             try:
                 if method == "Wi-Fi":
                     # Use existing wlan_receiver module
@@ -438,6 +445,7 @@ class FileTransferApp:
                         self.root.after(0, lambda: self.log("File received successfully - receiver still active"))
                     # Continue the loop to keep receiving more files
                 else:
+                    
                     # Use existing bluetooth_receiver module
                     success = bluetooth_receiver.start_receiver_blocking(
                         gui_callback=self.gui_save_callback,
