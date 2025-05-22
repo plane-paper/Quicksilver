@@ -1,10 +1,9 @@
 # Quicksilver
 
-![Version](https://img.shields.io/badge/version-v1.0.0-blue)
-![Python Version](https://img.shields.io/badge/python-3.12.6+-green)
-![Platform](https://img.shields.io/badge/platform-windows-lightgrey)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Status](https://img.shields.io/badge/status-in%20development-yellow)
+[![Version](https://img.shields.io/badge/version-v1.0.0-blue)](https://github.com/yourusername/quicksilver/releases)
+[![Python](https://img.shields.io/badge/python-3.12.6+-green)](https://github.com/yourusername/quicksilver/blob/main/requirements.txt)
+[![Python](https://img.shields.io/badge/platform-windows-lightgrey)](https://en.wikipedia.org/wiki/Windows_NT)
+[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/yourusername/quicksilver/blob/main/LICENSE.md)
 
 ## Introduction
 A scalable, easy-to-use, lightweight file transfer & detection system that uses both bluetooth and WLAN. Currently supports windows.
