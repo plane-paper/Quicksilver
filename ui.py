@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, PhotoImage
 import threading
 import os
 import time
@@ -18,9 +18,11 @@ import blue.bluetooth_receiver as bluetooth_receiver
 class FileTransferApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("File Transfer App")
+        self.root.title("Quicksilver: File Transfer")
         self.root.geometry("600x500")
         self.root.configure(padx=20, pady=20)
+        root.iconphoto(True, PhotoImage(file='./assets/logo_cropped.png'))
+
         
         self.sending = False
         self.receiving = False
