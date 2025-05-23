@@ -1,34 +1,182 @@
 # Quicksilver
 
-[![Version](https://img.shields.io/github/v/release/plane-paper/Quicksilver)](https://github.com/plane-paper/Quicksilver/releases)
-[![Python](https://img.shields.io/badge/python-3.12.6+-green)](https://github.com/plane-paper/Quicksilver/blob/main/requirements.txt)
-[![Python](https://img.shields.io/badge/platform-windows-lightgrey)](https://en.wikipedia.org/wiki/Windows_NT)
-[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/plane-paper/Quicksilver/blob/main/License.md)
+<div align="center">
 
-## Introduction
-A scalable, easy-to-use, lightweight file transfer & detection system that uses both bluetooth and WLAN. Currently supports windows.
+[![Version](https://img.shields.io/github/v/release/plane-paper/Quicksilver?style=for-the-badge&logo=github&color=blue)](https://github.com/plane-paper/Quicksilver/releases)
+[![Python](https://img.shields.io/badge/python-3.12.6+-green?style=for-the-badge&logo=python&logoColor=white)](https://github.com/plane-paper/Quicksilver/blob/main/requirements.txt)
+[![Platform](https://img.shields.io/badge/platform-windows-lightgrey?style=for-the-badge&logo=windows&logoColor=white)](https://en.wikipedia.org/wiki/Windows_NT)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](https://github.com/plane-paper/Quicksilver/blob/main/License.md)
 
-## Getting Started
-### INSTALLATION
-There are two options for installation: the EXE and the source code.
+**A lightning-fast, cross-protocol file transfer system**
 
-### REQUIREMENTS AND DEPENDENCIES
-If you are installing the pre-packaged EXE version of Quicksilver, no dependencies are needed.
+*Seamlessly transfer files using both Bluetooth and Wi-Fi with an intuitive interface*
 
-If you planning to clone the source code and make your own modifications, be sure to first install Python 3.12 or higher, then run in your shell or terminal:
+</div>
+
+---
+
+## 🌟 Features
+
+- **Dual Protocol Support** - Switch between Bluetooth (RFCOMM) and Wi-Fi (TCP) transfers
+- **Lightning Fast** - Optimized for speed and reliability
+- **Easy to Use** - Intuitive tabbed interface with real-time device discovery
+- **Smart Detection** - Automatic device discovery and connection management
+- **Cross-Device** - Transfer files between different devices seamlessly
+- **Secure** - Built-in connection validation and error handling
+
+## 🚀 Quick Start
+
+### Installation Options
+
+#### Option 1: Ready-to-Use Executable (Recommended)
+1. Visit our [**releases page**](https://github.com/plane-paper/Quicksilver/releases)
+2. Download the latest **"QuickSilver Executable"**
+3. Run and enjoy!
+
+#### Option 2: From Source Code
+```bash
+# Clone the repository
+git clone https://github.com/plane-paper/Quicksilver.git
+cd Quicksilver
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the application
+python ui.py
 ```
-cd C:/full/cloned/repo/path
+
+### Development Setup
+
+For developers and contributors:
+
+```bash
+# Build your own executable
+python build.py
+
+# Run in development mode
+python ui.py
+```
+
+> ** 💡 Pro Tip:** Debug messages are printed to the terminal for troubleshooting
+
+### ⚙️ System Requirements
+
+| Component | Requirement |
+|-----------|-------------|
+| **Operating System** | Windows NT+ |
+| **Python Version** | 3.12.6+ (source only) |
+| **Dependencies** | Auto-included in EXE |
+
+#### For Source Installation:
+```bash
+# Check your Python version
+python -V
+
+# Install requirements
 pip install -r requirements.txt
 ```
-So the appropriate python packages would be available for your scripts to run. You can also check requirements.txt in the root directory for a list of all necessary packages.
 
-If you already have python, you can run ```python -V``` in any terminal to check its version. 
+---
 
-### USER MANUAL
-TBD
+## 📖 User Guide
 
-## Issue Tracker
-- ~~The IP broadcast function is raw and has issues regarding platform detection (currently non-existent) and IP validation. This will be fixed after the main app has been developed.~~ This issue is resolved.
-- PyBluez2 has known compatibility issues with Python 3.10.X and above, so the version used is an unofficial community version stored on GitHub. As of today, this version is available. In the case that it is no longer available, please replace line 1 in requirements.txt with PyBluez2, and, if possible, also open a PR with the change so everyone else can enjoy the functional scripted version of this project.
-- The bluetooth sending & receiving pair is largely untested due to resource constraints. If any issues are found with preliminary testing, please let me know as soon as possible.
-- Some issues exist with detection while using the public internet. It is recommended that Windows has "private" internet settings turned on while using this application.
+### 📤 Sending Files
+
+<details>
+<summary><strong>Click to expand sending instructions</strong></summary>
+
+1. **Choose Your File**
+   - Click **"Browse"** or enter the file path directly
+   
+2. **Select Transfer Method**
+   - **Wi-Fi**: Uses TCP for fast local network transfers
+   - **Bluetooth**: Uses RFCOMM for device-to-device transfers
+   
+3. **Find Your Target Device**
+   - Click **"Refresh"** to update the device list
+   - Select your target device from the list
+   
+4. **Send**
+   - Click **"Send"** to initiate transfer
+   - Monitor progress and check for completion
+
+> **⚠️ Note:** Devices not responding for 10+ seconds may be unavailable
+
+</details>
+
+### 📥 Receiving Files
+
+<details>
+<summary><strong>Click to expand receiving instructions</strong></summary>
+
+1. **Configure Receiver Settings**
+   - **Wi-Fi Mode**: Broadcasts your device to the local network
+   - **Bluetooth Mode**: Enables Bluetooth file services
+   
+2. **Monitor Connections**
+   - Check the log for incoming connection attempts
+   - View real-time status updates
+   
+3. **Accept Files**
+   - A popup appears when files are incoming
+   - Choose your save location
+   - Click **"Cancel"** to reject unwanted transfers
+
+> **🔒 Security:** You have full control over which files to accept
+
+</details>
+
+---
+
+## 🐛 Known Issues & Solutions
+
+| Issue | Status | Solution |
+|-------|--------|----------|
+| PyBluez2 compatibility | **Workaround Available** | Using community GitHub version |
+| Bluetooth testing coverage | **Limited Testing** | Please report any issues |
+| Public internet detection | **Recommended Setting** | Use Windows "Private" network setting |
+
+### 🔧 Troubleshooting
+
+**PyBluez2 Issues:**
+- We use an unofficial but stable community version
+- If unavailable, replace line 1 in `requirements.txt` with `PyBluez2`
+- Consider submitting a PR with any fixes
+
+**Network Issues:**
+- Ensure Windows network is set to "Private"
+- Check firewall settings for blocked connections
+- Verify both devices are on the same network (Wi-Fi mode)
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Here's how you can help:
+
+1. **Report Bugs** - Use our issue tracker
+2. **Suggest Features** - Share your ideas
+3. **Submit PRs** - Help improve the code
+4. **Improve Docs** - Make our documentation better
+
+### Development Notes
+- Files are interdependent - avoid renaming/moving without testing
+- All changes should maintain backward compatibility
+- Test both Bluetooth and Wi-Fi functionality when possible
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [License.md](https://github.com/plane-paper/Quicksilver/blob/main/License.md) file for details.
+
+---
+
+<div align="center">
+
+**⭐ Star this repo if Quicksilver helped you!**
+
+[Report Bug](https://github.com/plane-paper/Quicksilver/issues) • [Request Feature](https://github.com/plane-paper/Quicksilver/issues) • [Contribute](https://github.com/plane-paper/Quicksilver/pulls)
+
+</div>
