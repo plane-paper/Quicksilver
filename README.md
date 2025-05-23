@@ -58,7 +58,7 @@ python build.py
 python ui.py
 ```
 
-> ** 💡 Pro Tip:** Debug messages are printed to the terminal for troubleshooting
+> **💡 Pro Tip:** Debug messages are printed to the terminal for troubleshooting
 
 ### ⚙️ System Requirements
 
