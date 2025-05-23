@@ -7,12 +7,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      id-token: write
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -37,9 +32,7 @@ jobs:
         run: python build.py
 
       - name: Verify build output
-        run: ls -la QuickSilver.exe
-
-      - run: npm ci
+        run: dir QuickSilver.exe
 
       - run: npm ci
 
