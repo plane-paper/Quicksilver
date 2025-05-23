@@ -1,6 +1,6 @@
 # Quicksilver
 
-[![Version](https://img.shields.io/badge/version-v1.0.0-blue)](https://github.com/plane-paper/Quicksilver/releases)
+[![Version](https://img.shields.io/github/v/release/plane-paper/Quicksilver)](https://github.com/plane-paper/Quicksilver/releases)
 [![Python](https://img.shields.io/badge/python-3.12.6+-green)](https://github.com/plane-paper/Quicksilver/blob/main/requirements.txt)
 [![Python](https://img.shields.io/badge/platform-windows-lightgrey)](https://en.wikipedia.org/wiki/Windows_NT)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/plane-paper/Quicksilver/blob/main/License.md)
