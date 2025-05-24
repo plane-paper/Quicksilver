@@ -133,7 +133,7 @@ pip install -r requirements.txt
 
 | Issue | Status | Solution |
 |-------|--------|----------|
-| PyBluez2 compatibility | **Workaround Available** | Using community GitHub version |
+| Socket Permission Error | **Workaround Available** | Right click -> Run as administrator |
 | Bluetooth testing coverage | **Limited Testing** | Please report any issues |
 | Public internet detection | **Recommended Setting** | Use Windows "Private" network setting |
 
